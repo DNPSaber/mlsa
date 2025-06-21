@@ -10,6 +10,7 @@ from classification_detection import run
 from SQL_auto import monitor_database
 import xj
 import schedule
+import fastweb
 
 
 def hourly_task():
@@ -142,21 +143,17 @@ if __name__ == "__main__":
     server_thread = threading.Thread(target=start_server, args=(folder_to_watch,))  # 创建图片接收服务器线程
     server_thread.daemon = True  # 设置为守护线程
     server_thread.start()
+    
+    web_thread = threading.Thread(target=fastweb.run)
+    web_thread.daemon = True
+    web_thread.start()
 
     print(f"开始监控文件夹: {folder_to_watch}")
     observer.start()  # 启动文件夹监控
-    
-    # while True:
-    #     try:
-    #         time.sleep(1)  # 主线程保持运行
-    #     except KeyboardInterrupt:
-    #         print("停止监控...")
-    #         observer.stop()
 
-    coordinates = xj.get_coordinates()
-    if coordinates:
-        xj.send_coordinates_via_ssh(coordinates)
-    print("开始每小时调用 xj 模块...")
     while True:
-        schedule.run_pending()
-        time.sleep(1)
+        try:
+            time.sleep(1)  # 主线程保持运行
+        except KeyboardInterrupt:
+            print("停止监控...")
+            observer.stop()

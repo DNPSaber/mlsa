@@ -84,8 +84,51 @@ def ensure_sub_tables_exist():
             print(f"子表 {table_name} 创建成功")
 
 
+def ensure_sz_report_exists():
+    table_exists_query = """
+        SELECT COUNT(*)
+        FROM information_schema.tables
+        WHERE table_schema = DATABASE()
+          AND table_name = 'sz_report'
+    """
+    create_table_query = """
+        CREATE TABLE sz_report (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            时间 VARCHAR(255) NOT NULL,
+            坐标 VARCHAR(255) NOT NULL,
+            检测结果 VARCHAR(255) NOT NULL,
+            url VARCHAR(255) NOT NULL
+        )
+    """
+    result = execute_query(table_exists_query)
+    if result and result[0][0] == 0:
+        execute_query(create_table_query)
+        print("渗水检测报告表 sz_report 创建成功")
+
+def ensure_sz_points_exists():
+    table_exists_query = """
+        SELECT COUNT(*)
+        FROM information_schema.tables
+        WHERE table_schema = DATABASE()
+          AND table_name = 'sz_points'
+    """
+    create_table_query = """
+        CREATE TABLE sz_points (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            start VARCHAR(255) NOT NULL,
+            end VARCHAR(255) NOT NULL
+        )
+    """
+    result = execute_query(table_exists_query)
+    if result and result[0][0] == 0:
+        execute_query(create_table_query)
+        print("渗水检测两点坐标表 sz_points 创建成功")
+
+
 def monitor_database():
     ensure_main_table_exists()
+    ensure_sz_report_exists()
+    ensure_sz_points_exists()
     last_count = get_main_table_count()
 
     try:

@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>仪表检测管理系统</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f7f7f7;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 30px auto;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px #eee;
+            padding: 24px;
+        }
+
+        h2 {
+            margin-top: 0;
+        }
+
+        .flex {
+            display: flex;
+            gap: 32px;
+        }
+
+        .block {
+            flex: 1;
+            background: #fafbfc;
+            border-radius: 6px;
+            padding: 18px;
+            box-shadow: 0 1px 3px #eee;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+
+        th {
+            background: #f0f0f0;
+        }
+
+        .danger {
+            color: #d32f2f;
+            font-weight: bold;
+        }
+
+        .btn {
+            padding: 4px 12px;
+            margin: 0 2px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: #1976d2;
+            color: #fff;
+        }
+
+        .btn-danger {
+            background: #d32f2f;
+            color: #fff;
+        }
+
+        .btn-secondary {
+            background: #888;
+            color: #fff;
+        }
+
+        .input {
+            padding: 4px 8px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+
+        .row {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+    <div class="container" style="max-width:60vw;width:60vw;margin:30px auto;">
+        <nav style="margin-bottom:24px;text-align:center;">
+            <ul style="display:flex;justify-content:center;list-style:none;padding:0;gap:24px;">
+                <li><a href="#overview" style="text-decoration:none;font-weight:bold;">系统总览</a></li>
+                <li><a href="#main-table" style="text-decoration:none;">主表管理</a></li>
+                <li><a href="#results" style="text-decoration:none;">检测结果</a></li>
+                <li><a href="#alarms" style="text-decoration:none;">异常报警</a></li>
+                <li><a href="#sz-report" style="text-decoration:none;">渗水检测报告</a></li>
+            </ul>
+        </nav>
+        <div v-if="page==='overview'">
+            <h2 style="text-align:center;">系统总览</h2>
+            <div class="block" style="width:100%;margin:auto;">
+                <h3 style="text-align:center;">最新异常信息</h3>
+                <div v-if="alarms.length === 0">
+                    <table style="margin:auto;">
+                        <tr>
+                            <td colspan="3">无</td>
+                        </tr>
+                    </table>
+                </div>
+                <div v-else>
+                    <table style="margin:auto;">
+                        <thead>
+                        <tr>
+                            <th>类型</th>
+                            <th>时间</th>
+                            <th>图片</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr v-for="a in alarms.slice(0,5)" :key="a.时间+a.类型">
+                            <td>{{a.类型}}</td>
+                            <td>{{a.时间}}</td>
+                            <td>
+                                <img v-if="a.url" :src="a.url" alt="异常图片" style="max-width:80px;max-height:80px;">
+                                <span v-else>无图片</span>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div v-else-if="page==='main-table'">
+            <h2 style="text-align:center;">主表管理</h2>
+            <div class="block" style="margin:auto;">
+                <form @submit.prevent="addMain">
+                    <div class="row" style="justify-content:center;display:flex;flex-wrap:wrap;gap:8px;">
+                        <input class="input" v-model="mainForm.name" placeholder="name" required>
+                        <input class="input" v-model="mainForm.x" placeholder="x" required>
+                        <input class="input" v-model="mainForm.y" placeholder="y" required>
+                        <input class="input" v-model="mainForm.yaw" placeholder="yaw" required>
+                        <input class="input" v-model="mainForm.max" placeholder="max" required>
+                        <input class="input" v-model="mainForm.min" placeholder="min" required>
+                        <button class="btn btn-primary" type="submit">新增</button>
+                    </div>
+                </form>
+                <table style="width:60%;margin:auto;">
+                    <thead>
+                    <tr>
+                        <th>id</th>
+                        <th>name</th>
+                        <th>x</th>
+                        <th>y</th>
+                        <th>yaw</th>
+                        <th>max</th>
+                        <th>min</th>
+                        <th>操作</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr v-if="mainTable.length === 0">
+                        <td colspan="8">无</td>
+                    </tr>
+                    <tr v-for="row in mainTable" :key="row.id" v-else>
+                        <td>{{row.id}}</td>
+                        <td><input class="input" v-model="row.name"></td>
+                        <td><input class="input" v-model="row.x"></td>
+                        <td><input class="input" v-model="row.y"></td>
+                        <td><input class="input" v-model="row.yaw"></td>
+                        <td><input class="input" v-model="row.max"></td>
+                        <td><input class="input" v-model="row.min"></td>
+                        <td>
+                            <button class="btn btn-primary" @click="updateMain(row)">保存</button>
+                            <button class="btn btn-danger" @click="deleteMain(row.id)">删除</button>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div v-else-if="page==='results'">
+            <h2 style="text-align:center;">检测结果查询</h2>
+            <div class="block" style="margin:auto;">
+                <div class="row" style="justify-content:center;display:flex;gap:8px;">
+                    <input class="input" v-model="queryKey" placeholder="按name或id查询">
+                    <button class="btn btn-secondary" @click="fetchResults">查询</button>
+                </div>
+                <table style="width:60%;margin:auto;">
+                    <thead>
+                    <tr>
+                        <th>时间</th>
+                        <th>url</th>
+                        <th>检测值</th>
+                        <th>是否异常</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr v-for="r in results" :key="r.时间+r.url">
+                        <td>{{r.时间}}</td>
+                        <td>
+                        <td>
+                            <img v-if="r.url" :src="r.url" alt="异常图片" style="max-width:80px;max-height:80px;">
+                            <span v-else>无图片</span>
+                        </td>
+                        <td>{{r.检测值}}</td>
+                        <td :class="{'danger': r.是否异常==='是'}">{{r.是否异常}}</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div v-else-if="page==='alarms'">
+            <h2 style="text-align:center;">异常报警</h2>
+            <div class="flex">
+                <div class="block">
+                    <h3 style="text-align:center;">设备异常</h3>
+                    <table style="width:100%;margin:auto;">
+                        <thead>
+                        <tr>
+                            <th>时间</th>
+                            <th>图片</th>
+                            <th>检测值</th>
+                            <th>主表id</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr v-if="deviceAlarms.length === 0">
+                            <td colspan="4">无</td>
+                        </tr>
+                        <tr v-for="a in deviceAlarms" :key="a.时间+a.url">
+                            <td>{{a.时间}}</td>
+                            <td>
+                                <img v-if="a.url" :src="a.url" alt="异常图片" style="max-width:80px;max-height:80px;">
+                                <span v-else>无图片</span>
+                            </td>
+                            <td class="danger">{{a.检测值}}</td>
+                            <td>{{a.id}}</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="block">
+                    <h3 style="text-align:center;">渗水异常</h3>
+                    <table style="width:100%;margin:auto;">
+                        <thead>
+                        <tr>
+                            <th>时间</th>
+                            <th>图片</th>
+                            <th>检测结果</th>
+                            <th>坐标</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr v-if="szAlarms.length === 0">
+                            <td colspan="4">无</td>
+                        </tr>
+                        <tr v-for="a in szAlarms" :key="a.时间+a.url">
+                            <td>{{a.时间}}</td>
+                            <td>
+                                <img v-if="a.url" :src="a.url" alt="异常图片" style="max-width:80px;max-height:80px;">
+                                <span v-else>无图片</span>
+                            </td>
+                            <td class="danger">{{a.检测结果}}</td>
+                            <td>{{a.坐标}}</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div v-else-if="page==='sz-report'">
+            <h2 style="text-align:center;">渗水检测报告</h2>
+            <div class="block" style="margin:auto;">
+                <form @submit.prevent="addSzPoint" style="margin-bottom:16px;text-align:center;">
+                    <span>起点坐标：</span>
+                    <input class="input" v-model="szPoint.start" style="width:120px;">
+                    <span>终点坐标：</span>
+                    <input class="input" v-model="szPoint.end" style="width:120px;">
+                    <button class="btn btn-primary" type="submit">保存</button>
+                </form>
+                <div style="text-align:center;margin-bottom:10px;">
+                    <span>当前起点：{{szPoint.start}}</span>
+                    <span style="margin-left:24px;">当前终点：{{szPoint.end}}</span>
+                </div>
+                <table style="width:60%;margin:auto;">
+                    <thead>
+                    <tr>
+                        <th>时间</th>
+                        <th>坐标</th>
+                        <th>检测结果</th>
+                        <th>图片</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr v-if="szReports.length === 0">
+                        <td colspan="4">无</td>
+                    </tr>
+                    <tr v-for="r in szReports" :key="r.时间+r.url" v-else>
+                        <td>{{r.时间}}</td>
+                        <td>{{r.坐标}}</td>
+                        <td>{{r.检测结果}}</td>
+                        <td>
+                            <img v-if="r.url" :src="r.url" alt="异常图片" style="max-width:80px;max-height:80px;">
+                            <span v-else>无图片</span>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <script>
+            const {createApp, reactive, ref, onMounted} = Vue;
+            createApp({
+                setup() {
+                    const alarms = ref([]);
+                    const mainTable = ref([]);
+                    const mainForm = reactive({name: '', x: '', y: '', yaw: '', max: '', min: ''});
+                    const results = ref([]);
+                    const queryKey = ref('');
+                    const page = ref('overview');
+                    const szReports = ref([]);
+                    const szPoint = reactive({start: '', end: ''});
+                    const deviceAlarms = ref([]);
+                    const szAlarms = ref([]);
+
+                    // 主表相关
+                    const fetchMain = async () => {
+                        const res = await fetch('/api/main');
+                        mainTable.value = await res.json();
+                    };
+                    const addMain = async () => {
+                        await fetch('/api/main', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify(mainForm)
+                        });
+                        Object.keys(mainForm).forEach(k => mainForm[k] = '');
+                        fetchMain();
+                    };
+                    const updateMain = async (row) => {
+                        await fetch(`/api/main/${row.id}`, {
+                            method: 'PUT',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify(row)
+                        });
+                        fetchMain();
+                    };
+                    const deleteMain = async (id) => {
+                        await fetch(`/api/main/${id}`, {method: 'DELETE'});
+                        fetchMain();
+                    };
+
+                    // 检测结果
+                    const fetchResults = async () => {
+                        const res = await fetch(`/api/results?key=${encodeURIComponent(queryKey.value)}`);
+                        results.value = await res.json();
+                    };
+                    // 异常报警
+                    const fetchAlarms = async () => {
+                        const res = await fetch('/api/alarms');
+                        const all = await res.json();
+                        alarms.value = all;
+                        deviceAlarms.value = all.filter(a => a.类型 === '仪表异常');
+                        szAlarms.value = all.filter(a => a.类型 === '渗水异常').map(a => ({
+                            ...a,
+                            检测结果: a.检测值,
+                            坐标: a.id
+                        }));
+                    };
+                    // 渗水检测报告
+                    const fetchSzReports = async () => {
+                        const res = await fetch('/api/sz_reports');
+                        szReports.value = await res.json();
+                    };
+                    // 渗水检测两点坐标获取
+                    const fetchSzPoint = async () => {
+                        const res = await fetch('/api/sz_points');
+                        const data = await res.json();
+                        szPoint.start = data.start || '';
+                        szPoint.end = data.end || '';
+                    };
+                    // 设置两点坐标
+                    const addSzPoint = async () => {
+                        await fetch('/api/sz_points', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify(szPoint)
+                        });
+                        alert('两点坐标已保存');
+                        fetchSzPoint();
+                    };
+                    // hash路由切换
+                    const updatePage = () => {
+                        const hash = window.location.hash.replace('#', '').replace('/', '');
+                        if (!hash || hash === 'overview') page.value = 'overview';
+                        else if (['main-table', 'results', 'alarms', 'sz-report'].includes(hash)) page.value = hash;
+                        else page.value = 'overview';
+                    };
+                    window.addEventListener('hashchange', updatePage);
+
+                    onMounted(() => {
+                        fetchAlarms();
+                        fetchMain();
+                        fetchResults();
+                        fetchSzReports();
+                        fetchSzPoint();
+                        updatePage();
+                    });
+                    return {
+                        alarms,
+                        mainTable,
+                        mainForm,
+                        addMain,
+                        updateMain,
+                        deleteMain,
+                        results,
+                        queryKey,
+                        fetchResults,
+                        page,
+                        szReports,
+                        szPoint,
+                        addSzPoint,
+                        deviceAlarms,
+                        szAlarms
+                    };
+                }
+            }).mount('#app');
+        </script>
+    </div>
+</div>
+</body>
+</html>
+
+
+
+
